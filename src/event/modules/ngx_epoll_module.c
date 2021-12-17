@@ -587,7 +587,7 @@ ngx_epoll_add_event(ngx_event_t *ev, ngx_int_t event, ngx_uint_t flags)
     c = ev->data;
 
     events = (uint32_t) event;
-
+    // 为什么 event == NGX_READ_EVENT 时 e = c->write???
     if (event == NGX_READ_EVENT) {
         e = c->write;
         prev = EPOLLOUT;
@@ -779,7 +779,7 @@ ngx_epoll_notify(ngx_event_handler_pt handler)
 
 #endif
 
-
+// 实现了收集、分发事件接口
 static ngx_int_t
 ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
 {
@@ -834,11 +834,13 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
     }
 
     for (i = 0; i < events; i++) {
+		// 获取连接 ngx_connection_t 的指针
         c = event_list[i].data.ptr;
 
         instance = (uintptr_t) c & 1;
         c = (ngx_connection_t *) ((uintptr_t) c & (uintptr_t) ~1);
 
+        // 读事件
         rev = c->read;
 
         if (c->fd == -1 || rev->instance != instance) {
@@ -890,7 +892,7 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
 
             rev->ready = 1;
             rev->available = -1;
-
+            // 如果抢到锁，放入事件队列
             if (flags & NGX_POST_EVENTS) {
                 queue = rev->accept ? &ngx_posted_accept_events
                                     : &ngx_posted_events;
@@ -898,10 +900,12 @@ ngx_epoll_process_events(ngx_cycle_t *cycle, ngx_msec_t timer, ngx_uint_t flags)
                 ngx_post_event(rev, queue);
 
             } else {
+				// 没抢到锁，立即调用事件回调方法来处理这个事件
                 rev->handler(rev);
             }
         }
 
+        // 写事件
         wev = c->write;
 
         if ((revents & EPOLLOUT) && wev->active) {

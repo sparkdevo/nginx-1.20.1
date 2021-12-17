@@ -194,7 +194,8 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     ngx_queue_init(&cycle->reusable_connections_queue);
 
-
+    // 为 cycle->conf_ctx 数组分配空间
+    // 从这里看 cycle->conf_ctx 的元素个数与模块的个数是相同的
     cycle->conf_ctx = ngx_pcalloc(pool, ngx_max_module * sizeof(void *));
     if (cycle->conf_ctx == NULL) {
         ngx_destroy_pool(pool);
@@ -632,6 +633,7 @@ ngx_init_cycle(ngx_cycle_t *old_cycle)
 
     pool->log = cycle->log;
 
+    // 调用每个模块的 init_module 方法初始化模块
     if (ngx_init_modules(cycle) != NGX_OK) {
         /* fatal */
         exit(1);

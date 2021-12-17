@@ -115,7 +115,8 @@ ngx_module_t  ngx_http_module = {
     NGX_MODULE_V1_PADDING
 };
 
-
+// 该函数在模块命令初始化的时候会回调
+// http 模块初始化的入口函数
 static char *
 ngx_http_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 {
@@ -1386,6 +1387,7 @@ ngx_http_optimize_servers(ngx_conf_t *cf, ngx_http_core_main_conf_t *cmcf,
         return NGX_OK;
     }
 
+    // 根据配置的端口好进行遍历
     port = ports->elts;
     for (p = 0; p < ports->nelts; p++) {
 
@@ -1709,7 +1711,8 @@ ngx_http_add_listening(ngx_conf_t *cf, ngx_http_conf_addr_t *addr)
     }
 
     ls->addr_ntop = 1;
-
+    // 监听套接字的回调函数。该函数在 ngx_event_accept 函数中被调用。
+    // 回调之后，会将读事件的回调函数 rev_handler 修改为 ngx_http_wait_request_handler 函数。
     ls->handler = ngx_http_init_connection;
 
     cscf = addr->default_server;

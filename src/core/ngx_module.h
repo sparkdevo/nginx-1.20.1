@@ -220,8 +220,9 @@
 
 
 struct ngx_module_s {
-    ngx_uint_t            ctx_index;
-    ngx_uint_t            index;
+    ngx_uint_t            ctx_index; // 表示的含义是什么？
+    ngx_uint_t            index;     // 表示的含义是什么？是核心模块的配置信息在 cycle->conf_ctx 数组中的索引
+                                     // 参考赋值语句：cycle->conf_ctx[cycle->modules[i]->index] = rv
 
     char                 *name;
 
@@ -231,17 +232,20 @@ struct ngx_module_s {
     ngx_uint_t            version;
     const char           *signature;
 
-    void                 *ctx;
+    // 模块的上下文。对于 events_module 来说，它就是
+    // static ngx_core_module_t ngx_events_module_ctx = 
+    // { ngx_string("events"), NULL,ngx_event_init_conf };
+    void                 *ctx;        
     ngx_command_t        *commands;
     ngx_uint_t            type;
 
-    ngx_int_t           (*init_master)(ngx_log_t *log);
+    ngx_int_t           (*init_master)(ngx_log_t *log);       // 主进程初始化的时候调用
 
-    ngx_int_t           (*init_module)(ngx_cycle_t *cycle);
+    ngx_int_t           (*init_module)(ngx_cycle_t *cycle);   // 模块初始化的时候调用
 
-    ngx_int_t           (*init_process)(ngx_cycle_t *cycle);
-    ngx_int_t           (*init_thread)(ngx_cycle_t *cycle);
-    void                (*exit_thread)(ngx_cycle_t *cycle);
+    ngx_int_t           (*init_process)(ngx_cycle_t *cycle);  // worker 进程初始化的时候调用
+    ngx_int_t           (*init_thread)(ngx_cycle_t *cycle);   // 线程初始化时调用
+    void                (*exit_thread)(ngx_cycle_t *cycle);   
     void                (*exit_process)(ngx_cycle_t *cycle);
 
     void                (*exit_master)(ngx_cycle_t *cycle);

@@ -208,6 +208,7 @@ main(int argc, char *const *argv)
         return 1;
     }
 
+	// 主要用于解析命令行中的参数，例如：./nginx -s stop|start|restart
     if (ngx_get_options(argc, argv) != NGX_OK) {
         return 1;
     }
@@ -221,7 +222,7 @@ main(int argc, char *const *argv)
     }
 
     /* TODO */ ngx_max_sockets = -1;
-
+	// 初始化并更新时间，如全局变量ngx_cached_time
     ngx_time_init();
 
 #if (NGX_PCRE)
@@ -230,7 +231,7 @@ main(int argc, char *const *argv)
 
     ngx_pid = ngx_getpid();
     ngx_parent = ngx_getppid();
-
+	// 初始化日志，并得到日志的文件句柄ngx_log_file.fd
     log = ngx_log_init(ngx_prefix, ngx_error_log);
     if (log == NULL) {
         return 1;
@@ -249,7 +250,8 @@ main(int argc, char *const *argv)
     ngx_memzero(&init_cycle, sizeof(ngx_cycle_t));
     init_cycle.log = log;
     ngx_cycle = &init_cycle;
-
+	
+	// 创建一个大小为 1024 的内存池
     init_cycle.pool = ngx_create_pool(1024, log);
     if (init_cycle.pool == NULL) {
         return 1;
@@ -262,7 +264,7 @@ main(int argc, char *const *argv)
     if (ngx_process_options(&init_cycle) != NGX_OK) {
         return 1;
     }
-
+	// 初始化系统相关变量，如内存页面大小ngx_pagesize,ngx_cacheline_size,最大连接数ngx_max_sockets等
     if (ngx_os_init(log) != NGX_OK) {
         return 1;
     }
@@ -270,7 +272,7 @@ main(int argc, char *const *argv)
     /*
      * ngx_crc32_table_init() requires ngx_cacheline_size set in ngx_os_init()
      */
-
+	// 初始化一致性hash表，主要作用是加快查询
     if (ngx_crc32_table_init() != NGX_OK) {
         return 1;
     }
@@ -284,11 +286,11 @@ main(int argc, char *const *argv)
     if (ngx_add_inherited_sockets(&init_cycle) != NGX_OK) {
         return 1;
     }
-
+	// 对模块进行编号处理
     if (ngx_preinit_modules() != NGX_OK) {
         return 1;
     }
-
+	// 完成全局变量cycle的初始化
     cycle = ngx_init_cycle(&init_cycle);
     if (cycle == NULL) {
         if (ngx_test_config) {
@@ -324,7 +326,8 @@ main(int argc, char *const *argv)
 
         return 0;
     }
-
+	
+    // 如果有信号，则进入ngx_signal_process方法。例如：例如./nginx -s stop,则处理Nginx的停止信号
     if (ngx_signal) {
         return ngx_signal_process(cycle, ngx_signal);
     }
@@ -333,6 +336,8 @@ main(int argc, char *const *argv)
 
     ngx_cycle = cycle;
 
+    // 得到核心模块ngx_core_conf_t的配置文件指针
+    // ngx_get_conf(conf_ctx, module)  conf_ctx[module.index]
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
     if (ccf->master && ngx_process == NGX_PROCESS_SINGLE) {

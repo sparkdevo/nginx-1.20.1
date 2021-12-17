@@ -93,11 +93,11 @@ static ngx_command_t  ngx_events_commands[] = {
 
 static ngx_core_module_t  ngx_events_module_ctx = {
     ngx_string("events"),
-    NULL,
+    NULL, // events_module 的配置项是如何构建的？见 ngx_events_block 函数
     ngx_event_init_conf
 };
 
-
+// events_module 是管理众多 event 扩展模块的核心模块，属于框架性的存在
 ngx_module_t  ngx_events_module = {
     NGX_MODULE_V1,
     &ngx_events_module_ctx,                /* module context */
@@ -118,7 +118,7 @@ static ngx_str_t  event_core_name = ngx_string("event_core");
 
 
 static ngx_command_t  ngx_event_core_commands[] = {
-
+	
     { ngx_string("worker_connections"),
       NGX_EVENT_CONF|NGX_CONF_TAKE1,
       ngx_event_connections,
@@ -173,7 +173,7 @@ static ngx_event_module_t  ngx_event_core_module_ctx = {
     { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL }
 };
 
-
+// event_core_module 是处理事件的真正干活的模块
 ngx_module_t  ngx_event_core_module = {
     NGX_MODULE_V1,
     &ngx_event_core_module_ctx,            /* module context */
@@ -189,7 +189,7 @@ ngx_module_t  ngx_event_core_module = {
     NGX_MODULE_V1_PADDING
 };
 
-
+// 事件驱动的核心函数
 void
 ngx_process_events_and_timers(ngx_cycle_t *cycle)
 {
@@ -409,7 +409,8 @@ ngx_handle_write_event(ngx_event_t *wev, size_t lowat)
     return NGX_OK;
 }
 
-
+// 初始话核心模块 events_module 的配置
+// 这货干啥了？？
 static char *
 ngx_event_init_conf(ngx_cycle_t *cycle, void *conf)
 {
@@ -462,7 +463,7 @@ ngx_event_init_conf(ngx_cycle_t *cycle, void *conf)
     return NGX_CONF_OK;
 }
 
-
+??????????????不懂！！！！
 static ngx_int_t
 ngx_event_module_init(ngx_cycle_t *cycle)
 {
@@ -475,6 +476,7 @@ ngx_event_module_init(ngx_cycle_t *cycle)
     ngx_event_conf_t    *ecf;
 
     cf = ngx_get_conf(cycle->conf_ctx, ngx_events_module);
+	// ngx_get_conf(conf_ctx, module)  conf_ctx[module.index]
     ecf = (*cf)[ngx_event_core_module.ctx_index];
 
     if (!ngx_test_config && ngx_process <= NGX_PROCESS_MASTER) {
@@ -482,6 +484,7 @@ ngx_event_module_init(ngx_cycle_t *cycle)
                       "using the \"%s\" event method", ecf->name);
     }
 
+    // 注意，这里取的是 core_module 的配置信息
     ccf = (ngx_core_conf_t *) ngx_get_conf(cycle->conf_ctx, ngx_core_module);
 
     ngx_timer_resolution = ccf->timer_resolution;
@@ -958,19 +961,21 @@ ngx_events_block(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
     }
 
     /* count the number of the event modules and set up their indices */
-
+    // 数数有多少个事件模块
     ngx_event_max_module = ngx_count_modules(cf->cycle, NGX_EVENT_MODULE);
 
+    // 这里分配的是保存一个指针的空间
     ctx = ngx_pcalloc(cf->pool, sizeof(void *));
     if (ctx == NULL) {
         return NGX_CONF_ERROR;
     }
-
+    // 这里分配的是一个指针数组
     *ctx = ngx_pcalloc(cf->pool, ngx_event_max_module * sizeof(void *));
     if (*ctx == NULL) {
         return NGX_CONF_ERROR;
     }
 
+    // conf 是个指针(地址)
     *(void **) conf = ctx;
 
     for (i = 0; cf->cycle->modules[i]; i++) {
@@ -1262,6 +1267,10 @@ ngx_event_core_init_conf(ngx_cycle_t *cycle, void *conf)
 
 #if (NGX_HAVE_EPOLL) && !(NGX_TEST_BUILD_EPOLL)
 
+    // 参数 100 已经没有意义，大于 0 即可
+    // 最初实现的版本， size参数的作用是创建epoll实例时候告诉内核需要使用多少个文件描述符。
+    // 内核会使用 size 的大小去申请对应的内存(如果在使用的时候超过了给定的size， 内核会申请更多的空间)。
+    // 现在，这个size参数不再使用了（内核会动态的申请需要的内存）
     fd = epoll_create(100);
 
     if (fd != -1) {
